@@ -3,7 +3,7 @@
 A simple tool to list and delete metrics, and report stats about metrics
 
 ##Installation
-To build from source, clone this repository and run 'mvn clean install'. This will produce a metrics-VERSION-jar-with-dependencies.jar in the target directory. Alternatively, download the latest release archive from [Github](https://github.com/Appdynamics/appdynamics-metrics/releases).
+To build from source, clone this repository and run 'gradlew shadowJar'. This will produce a metrics-VERSION-all.jar in the build/libs directory. Alternatively, download the latest release archive from [Github](https://github.com/Appdynamics/appdynamics-metrics/releases).
 
 ##Usage
 
