@@ -1,0 +1,26 @@
+plugins {
+  id "com.github.johnrengelman.shadow" version "2.0.1"
+  id "java"
+}
+
+group = 'org.appdynamics'
+version = '1.0.1'
+
+description = """"""
+
+sourceCompatibility = 1.7
+targetCompatibility = 1.7
+
+repositories {
+     maven { url "http://repo.maven.apache.org/maven2" }
+}
+
+dependencies {
+    compile group: 'mysql', name: 'mysql-connector-java', version:'5.1.17'
+}
+
+jar {
+    manifest {
+        attributes 'Main-Class': 'org.appdynamics.metrics.Metrics'
+    }
+}
