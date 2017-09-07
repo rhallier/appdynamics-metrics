@@ -2,14 +2,16 @@ package org.appdynamics.metrics;
 
 public class MetricStorageStat {
 	public String table;
-	public long sizeKB;
-	public int count;
+	public long sizeMB;
+	public long count;
+	public int avgRowLength;
 
-	public MetricStorageStat(String table, long sizeKB, int count) {
+	public MetricStorageStat(String table, long sizeKB, long count, int avgRowLength) {
 		super();
 		this.table = table;
-		this.sizeKB = sizeKB;
+		this.sizeMB = sizeKB;
 		this.count = count;
+		this.avgRowLength = avgRowLength;
 	}
 
 	public String getTable() {
@@ -20,25 +22,32 @@ public class MetricStorageStat {
 		this.table = table;
 	}
 
-	public long getSizeKB() {
-		return sizeKB;
+	public long getSizeMB() {
+		return sizeMB;
 	}
 
-	public void setSizeKB(long sizeKB) {
-		this.sizeKB = sizeKB;
+	public void setSizeMB(long sizeMB) {
+		this.sizeMB = sizeMB;
 	}
 
-	public int getCount() {
+	public long getCount() {
 		return count;
 	}
 
-	public void setCount(int count) {
+	public void setCount(long count) {
 		this.count = count;
+	}
+
+	public int getAvgRowLength() {
+		return avgRowLength;
+	}
+
+	public void setAvgRowLength(int avgRowLength) {
+		this.avgRowLength = avgRowLength;
 	}
 
 	@Override
 	public String toString() {
-		return "MetricStorageStat [table=" + table + ", sizeKB=" + sizeKB + ", count=" + count + "]";
+		return "MetricStorageStat [table=" + table + ", sizeMB=" + sizeMB + ", count=" + count + ", avgRowLength=" + avgRowLength + "]";
 	}
-
 }

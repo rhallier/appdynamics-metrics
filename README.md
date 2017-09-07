@@ -64,17 +64,11 @@ Storage (default : mysql root@localhost:3388)
 
     java -jar metrics-VERSION-all.jar -password=*** metrics-stats-storage
     
-    Table;Count;SizeKB;
-    "metricdata_hour";"3422";"7760";
-    "metricdata_hour_agg";"3422";"7760";
-    "metricdata_hour_agg_app";"3422";"7744";
-    "metricdata_min";"0";"704";
-    "metricdata_min_agg";"0";"176";
-    "metricdata_min_agg_app";"0";"352";
-    "metricdata_ten_min";"0";"1408";
-    "metricdata_ten_min_agg";"0";"352";
-    "metricdata_ten_min_agg_app";"0";"352";
-
+    Table;Count;SizeMB;AvgRowLength;
+    ...
+    "metricdata_hour";3422;8;226;
+	...
+	
 ##Contributing
 
 Always feel free to fork and contribute any changes directly here on GitHub.

@@ -16,12 +16,36 @@ public class PrinterAdapter {
 			writer = new PrintWriter(filename);
 	}
 	
-	public void health() {
+	public void console() {
+		console(".",false);
+	}
+
+	public void consoleln() {
+		console("",true);
+	}
+
+	public void console(String value) {
+		console(value, false);
+	}
+
+
+	public void consoleln(String value) {
+		console(value, true);
+	}
+	
+	private void console(String value, boolean line) {
 		if(writer!=null) {
 			counter++;
-			System.out.print(".");
-			if(counter % 40 == 0)
-				System.out.println("");
+			
+			if(line) {
+				System.out.println(value);
+				counter=0;
+			}
+			else {
+				System.out.print(value);
+				if(counter % 40 == 0)
+					System.out.println("");
+			}
 		}
 	}
 

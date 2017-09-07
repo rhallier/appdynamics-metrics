@@ -53,7 +53,8 @@ public class Metrics {
 				listMetrics(conn, pgArgs.getArgument(1), out, db);
 			} else if (pgArgs.getArgument(0).equals("metrics-stats")) {
 				conn = DriverManager.getConnection(jdbcUrl);
-				statsMetrics(conn, pgArgs.getArgument(2), out, db);
+				int beforeMin = pgArgs.getArgument(1) !=null ? Integer.parseInt(pgArgs.getArgument(1)): 10;
+				statsMetrics(conn, beforeMin, out, db);
 			} else if (pgArgs.getArgument(0).equals("metrics-stats-storage")) {
 				conn = DriverManager.getConnection(jdbcUrl);
 				statsMetricsStorage(conn, pgArgs.getArgument(2), out, db);
@@ -76,7 +77,7 @@ public class Metrics {
 	}
 
 	private static void displayUsage() {
-		System.out.println("Usage : [-hostname=] [-port=] [-username=] [-password=] [-filename=] applications|tiers|metrics-list [filter]|metrics-stats-storage||metrics-stats|metrics-delete filter");
+		System.out.println("Usage : [-hostname=] [-port=] [-username=] [-password=] [-filename=] applications|tiers|metrics-list [filter]|metrics-stats-storage|metrics-stats [beforeMin]|metrics-delete filter");
 		System.exit(0);
 	}
 
@@ -84,12 +85,12 @@ public class Metrics {
 		Statement stmt = null;
 		ResultSet rs = null;
 		 
-		out.health();
+		out.console();
 
 		stmt = conn.createStatement();
 		rs = stmt.executeQuery("SELECT id, name FROM application");
 
-		out.health();
+		out.console();
 
 		while (rs.next()) {
 			long id = rs.getLong(1);
@@ -103,12 +104,12 @@ public class Metrics {
 		Statement stmt = null;
 		ResultSet rs = null;
 
-		out.health();
+		out.console();
 
 		stmt = conn.createStatement();
 		rs = stmt.executeQuery("SELECT application_id,id, name FROM application_component");
 
-		out.health();
+		out.console();
 
 		while (rs.next()) {
 			long app_id = rs.getLong(1);
@@ -129,9 +130,9 @@ public class Metrics {
 			out.println(String.format(row, !m.isReferenced() ? "true" : "false", m.getApp_id(), m.getId(), m.getName()));
 	}
 
-	private static void statsMetrics(Connection conn, String filter, PrinterAdapter out, String db) throws SQLException, FileNotFoundException {
+	private static void statsMetrics(Connection conn, int beforeMin, PrinterAdapter out, String db) throws SQLException, FileNotFoundException {
 
-		Collection<MetricStat> stats = findMetricStats(conn, filter, out, db);
+		Collection<MetricStat> stats = findMetricStats(conn, beforeMin, out, db);
 		
 		String header = "Timestamp;AccountName;ApplicationName;TierName;NodeName;AgentType;MetricsCount;";
 		String row = "\"%tc\";\"%s\";\"%s\";\"%s\";\"%s\";\"%s\";\"%d\";";
@@ -146,13 +147,13 @@ public class Metrics {
 
 		Collection<MetricStorageStat> stats = findMetricStatsStorage(conn, filter, out, db);
 		
-		String header = "Table;Count;SizeKB;";
-		String row = "\"%s\";\"%d\";\"%d\";";
+		String header = "Table;Count;SizeMB;AvgRowLength";
+		String row = "\"%s\";%d;%d;%d;";
 		
 		out.println(header);
 		
 		for (MetricStorageStat m : stats)
-			out.println(String.format(row, m.getTable(), m.getCount(), m.getSizeKB()));
+			out.println(String.format(row, m.getTable(), m.getCount(), m.getSizeMB(), m.getAvgRowLength()));
 	}
 
 	private static Collection<Metric> findMetrics(Connection conn, String filter, PrinterAdapter out, String db) throws SQLException {
@@ -161,7 +162,7 @@ public class Metrics {
 		Statement stmt = null;
 		ResultSet rs = null;
 
-		out.health();
+		out.console();
 
 		stmt = conn.createStatement();
 		String sql = "SELECT application_id,id, name," + computeIsReferencedMetric(conn, db, "metric") + " FROM metric";
@@ -169,7 +170,7 @@ public class Metrics {
 			sql = sql + " where name like '%" + filter + "%'";
 		rs = stmt.executeQuery(sql);
 
-		out.health();
+		out.console();
 
 		while (rs.next()) {
 			long app_id = rs.getLong(1);
@@ -178,25 +179,25 @@ public class Metrics {
 			boolean isReferenced = rs.getBoolean(4);
 
 			metrics.add(new Metric(id, app_id, name, isReferenced));
-			out.health();
+			out.console();
 		}
 
 		return metrics;
 	}
 
-	private static Collection<MetricStat> findMetricStats(Connection conn, String filter, PrinterAdapter out, String db) throws SQLException {
+	private static Collection<MetricStat> findMetricStats(Connection conn, int beforeMin, PrinterAdapter out, String db) throws SQLException {
 		Collection<MetricStat> metricStats = new LinkedList<>();
 
 		Statement stmt = null;
 		ResultSet rs = null;
 
-		out.health();
+		out.console();
 		
 		stmt = conn.createStatement();
-		String sql = "select from_unixtime(mdm.ts_min*60), acc.name, app.name as application, tier.name as tier, node.name as node, m.agent_type, count(*) from metricdata_min mdm join metric m on m.id=mdm.metric_id join application app on app.id=m.application_id join account acc on app.account_id=acc.id left join application_component_node node on node.id=mdm.node_id left join application_component tier on tier.id=node.application_component_id where ts_min = (select max(ts_min) - 0 from metricdata_min) group by 1, 2, 3, 4, 5, 6 order by 1";
+		String sql = "select from_unixtime(mdm.ts_min*60), acc.name, app.name as application, tier.name as tier, node.name as node, m.agent_type, count(*) from metricdata_min mdm join metric m on m.id=mdm.metric_id join application app on app.id=m.application_id join account acc on app.account_id=acc.id left join application_component_node node on node.id=mdm.node_id left join application_component tier on tier.id=node.application_component_id where ts_min = (select max(ts_min) - "+beforeMin+" from metricdata_min) group by 1, 2, 3, 4, 5, 6 order by 1";
 		rs = stmt.executeQuery(sql);
 
-		out.health();
+		out.console();
 
 		while (rs.next()) {
 			Date timestamp = rs.getDate(1);
@@ -208,7 +209,7 @@ public class Metrics {
 			int metricsCount = rs.getInt(7);
 
 			metricStats.add(new MetricStat(timestamp, accountName, applicationName, tierName, nodeName, agentType, metricsCount));
-			out.health();
+			out.console();
 		}
 
 		return metricStats;
@@ -218,48 +219,23 @@ public class Metrics {
 		Collection<MetricStorageStat> metricStorageStats = new ArrayList<MetricStorageStat>();
 		List<String> tables = new ArrayList<String>();
 
-		Statement stmt = null;
-		ResultSet rs = null;
+		Statement stmt = conn.createStatement();
 
-		out.health();
-
-		stmt = conn.createStatement();
-
-		// Lookup table names
-		rs = stmt.executeQuery("SELECT table_name FROM information_schema.tables where table_name like 'metricdata%'");
+		ResultSet rs = stmt.executeQuery("SELECT TABLE_NAME, ROUND((DATA_LENGTH + INDEX_LENGTH) / 1024 / 1024), TABLE_ROWS, AVG_ROW_LENGTH FROM information_schema.TABLES order by 2 desc");
+		long size=0,count=0;
+		int avgRowLength=0;
+		String tableName;
 		
-		while (rs.next()) {
-			tables.add(rs.getString(1));
+		while(rs.next()) {
+			tableName = rs.getString(1);
+			size = rs.getLong(2);
+			count = rs.getLong(3);
+			avgRowLength = rs.getInt(4);
+			
+			metricStorageStats.add(new MetricStorageStat(tableName, size, count, avgRowLength));
 		}
 		
 		stmt.close();
-
-		out.health();
-
-		// Find sizes
-		PreparedStatement sizePS = conn.prepareStatement("SELECT ROUND((DATA_LENGTH + INDEX_LENGTH) / 1024) FROM information_schema.TABLES WHERE TABLE_NAME = ?");
-		Statement countPS = conn.createStatement();
-		long size=0;
-		int count=0;
-		
-		for(String tableName : tables) {
-			sizePS.setString(1, tableName);
-			rs = sizePS.executeQuery();
-			if(rs.next())
-				size = rs.getLong(1);
-			rs.close();
-			
-			rs = countPS.executeQuery("SELECT COUNT(*) FROM "+tableName);
-			if(rs.next())
-				count = rs.getInt(1);
-			rs.close();
-			
-			metricStorageStats.add(new MetricStorageStat(tableName, size, count));
-			out.health();
-		}
-		
-		sizePS.close();
-		countPS.close();
 
 		return metricStorageStats;
 	}
@@ -290,7 +266,7 @@ public class Metrics {
 						out.println("Deleting : " + metric);
 					}
 
-					out.health();
+					out.console();
 				}
 			} catch (Exception e) {
 				conn.rollback();
