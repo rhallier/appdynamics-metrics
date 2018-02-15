@@ -46,6 +46,25 @@ class MetricStat {
 		return agentType;
 	}
 
+	public String getModifiedAgentType() {
+		String result = agentType;
+		
+		if(tierName == null || "null".equalsIgnoreCase(tierName))
+			result = "EUM";
+		else if("Server & Infrastructure Monitoring".equals(applicationName)) {
+			result = "MACHINE_AGENT_SERVER_VISIBILITY";
+		}
+		else if("Database Monitoring".equals(applicationName)) {
+			if("MACHINE_AGENT".equals(agentType))
+				result = "MACHINE_AGENT_DB_COLLECTOR";
+		}
+		else if("MACHINE_AGENT".equals(agentType)) {
+			result = "MACHINE_AGENT_LEGACY";
+		}
+
+		return result;
+	}
+
 	public int getMetricsCount() {
 		return metricsCount;
 	}

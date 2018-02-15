@@ -55,6 +55,10 @@ public class Metrics {
 				conn = DriverManager.getConnection(jdbcUrl);
 				int beforeMin = pgArgs.getArgument(1) !=null ? Integer.parseInt(pgArgs.getArgument(1)): 10;
 				statsMetrics(conn, beforeMin, out, db);
+			} else if (pgArgs.getArgument(0).equals("metrics-stats-summary")) {
+				conn = DriverManager.getConnection(jdbcUrl);
+				int beforeMin = pgArgs.getArgument(1) !=null ? Integer.parseInt(pgArgs.getArgument(1)): 10;
+				statsMetricsSummary(conn, beforeMin, out, db);
 			} else if (pgArgs.getArgument(0).equals("metrics-stats-storage")) {
 				conn = DriverManager.getConnection(jdbcUrl);
 				statsMetricsStorage(conn, pgArgs.getArgument(2), out, db);
@@ -77,7 +81,7 @@ public class Metrics {
 	}
 
 	private static void displayUsage() {
-		System.out.println("Usage : [-hostname=] [-port=] [-username=] [-password=] [-filename=] applications|tiers|metrics-list [filter]|metrics-stats-storage|metrics-stats [beforeMin]|metrics-delete filter");
+		System.out.println("Usage : [-hostname=] [-port=] [-username=] [-password=] [-filename=] applications|tiers|metrics-list [filter]|metrics-stats-storage|metrics-stats|metrics-stats-summary [beforeMin]|metrics-delete filter");
 		System.exit(0);
 	}
 
@@ -135,12 +139,54 @@ public class Metrics {
 		Collection<MetricStat> stats = findMetricStats(conn, beforeMin, out, db);
 		
 		String header = "Timestamp;AccountName;ApplicationName;TierName;NodeName;AgentType;MetricsCount;";
-		String row = "\"%tc\";\"%s\";\"%s\";\"%s\";\"%s\";\"%s\";\"%d\";";
+		String row = "\"%tc\";\"%s\";\"%s\";\"%s\";\"%s\";\"%s\";%d;";
 		
 		out.println(header);
 		
 		for (MetricStat m : stats)
-			out.println(String.format(row, m.getTimestamp(), m.getAccountName(), m.getApplicationName(), m.getTierName(), m.getNodeName(), m.getAgentType(), m.getMetricsCount()));
+			out.println(String.format(row, m.getTimestamp(), m.getAccountName(), m.getApplicationName(), m.getTierName(), m.getNodeName(), m.getModifiedAgentType(), m.getMetricsCount()));
+	}
+
+	private static void statsMetricsSummary(Connection conn, int beforeMin, PrinterAdapter out, String db) throws SQLException, FileNotFoundException {
+
+		Collection<MetricStat> stats = findMetricStats(conn, beforeMin, out, db);
+		
+		// Group by AgentType
+		Map<String, List<MetricStat>> agentTypes = new HashMap<String, List<MetricStat>>();
+		for(MetricStat ms : stats) {
+			List<MetricStat> s = agentTypes.get(ms.getModifiedAgentType());
+			
+			if(s==null) {
+				s = new LinkedList<MetricStat>();
+				agentTypes.put(ms.getModifiedAgentType(), s);
+			}
+			
+			s.add(ms);
+		}
+		
+		// Compute Sum, Avg, Count, Min and Max
+		Map<String, GroupOperator> operators = new HashMap<String, GroupOperator>();
+		
+		for(String agentType : agentTypes.keySet()) {
+			GroupOperator go = null;
+			
+			for(MetricStat ms : agentTypes.get(agentType)) {
+				if(go==null) {
+					go = new GroupOperator(agentType, ms.getTimestamp());
+					operators.put(agentType, go);
+				}
+				go.update(ms.getMetricsCount());
+			}
+		}
+
+		// Display
+		String header = "Timestamp;AgentType;Min;Avg;Max;Sum;Count;";
+		String row = "\"%tc\";\"%s\";%d;%d;%d;%d;%d;";
+		
+		out.println(header);
+		
+		for (GroupOperator go : operators.values())
+			out.println(String.format(row, go.timestamp, go.agentType, go.min, go.getAvg(), go.max, go.sum, go.count));
 	}
 
 	private static void statsMetricsStorage(Connection conn, String filter, PrinterAdapter out, String db) throws SQLException, FileNotFoundException {
@@ -217,7 +263,6 @@ public class Metrics {
 
 	private static Collection<MetricStorageStat> findMetricStatsStorage(Connection conn, String filter, PrinterAdapter out, String db) throws SQLException {
 		Collection<MetricStorageStat> metricStorageStats = new ArrayList<MetricStorageStat>();
-		List<String> tables = new ArrayList<String>();
 
 		Statement stmt = conn.createStatement();
 
@@ -324,8 +369,10 @@ public class Metrics {
 					if (arg == null)
 						continue;
 					if (arg.startsWith("-") && arg.contains("=")) {
-						String[] splits = arg.substring(1).split("=");
-						parameters.put(splits[0], splits[1]);
+						int index = arg.indexOf("=");
+						String action = arg.substring(1,index);
+						String value = arg.substring(index+1);
+						parameters.put(action, value);
 					} else
 						arguments.add(arg);
 				}
@@ -347,6 +394,33 @@ public class Metrics {
 		String getParameter(String key, String defaultValue) {
 			return parameters.containsKey(key) ? parameters.get(key) : defaultValue;
 		}
+	}
 
+	static class GroupOperator {
+		public String agentType;
+		public Date timestamp;
+		public long count;
+		public long sum;
+		public long min=-1;
+		public long max;
+		
+		public GroupOperator(String agentType, Date timestamp) {
+			super();
+			this.agentType = agentType;
+			this.timestamp = timestamp;
+		}
+
+		void update(long value) {
+			if(value>max)
+				max=value;
+			if(min<0 || value<min)
+				min=value;
+			sum+=value;
+			count++;
+		}
+		
+		long getAvg() {
+			return (long)sum/count;
+		}
 	}
 }

@@ -56,8 +56,18 @@ Count (default : mysql root@localhost:3388)
     java -jar metrics-VERSION-all.jar -password=*** metrics-stats
 
     Timestamp;AccountName;ApplicationName;TierName;NodeName;AgentType;MetricsCount
-    Thu Aug 24 00:00:00 CEST 2017;customer1;MyApp1;MyTier1;MyNode1;MACHINE_AGENT;43
+    Thu Aug 24 00:00:00 CEST 2017;customer1;MyApp1;MyTier1;MyNode1;MACHINE_AGENT_LEGACY;43
     Thu Aug 24 00:00:00 CEST 2017;customer1;MyApp2;MyTier2;Mu=yNode2;APP_AGENT;66
+    ...
+
+Summary (default : mysql root@localhost:3388) 
+
+    java -jar metrics-VERSION-all.jar -password=*** metrics-stats-summary
+
+	Timestamp;AgentType;Min;Avg;Max;Sum;Count;
+	"Mon Feb 12 00:00:00 CET 2018";"APP_AGENT";103;227;2196;205434;902;
+	"Mon Feb 12 00:00:00 CET 2018";"MACHINE_AGENT_LEGACY";64;84;92;4876;58;
+	"Mon Feb 12 00:00:00 CET 2018";"EUM";890;2372;9641;21356;9;
     ...
 
 Storage (default : mysql root@localhost:3388) 
